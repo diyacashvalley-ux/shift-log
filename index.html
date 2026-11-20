@@ -9,42 +9,42 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Shift Log">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#f3f5f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#11171c" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fdf0f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1f1419" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <style>
-/* Layout: a timesheet. Punch clock on top, the week as a ledger strip, then the shift log. */
+/* Layout: a timesheet. Punch clock on top, the week as a ledger strip, then the shift log. Baby-pink theme. */
 :root {
-  --bg: #f3f5f7;
+  --bg: #fdf0f4;
   --surface: #ffffff;
-  --ink: #17212b;
-  --muted: #5b6875;
-  --line: #d9e0e6;
-  --accent: #0f6c74;
+  --ink: #3b2430;
+  --muted: #86677a;
+  --line: #f3d3df;
+  --accent: #b8436f;
   --accent-ink: #ffffff;
-  --accent-soft: #dcefef;
-  --over: #b4561b;
-  --over-soft: #f6e4d6;
+  --accent-soft: #fde1ea;
+  --over: #b9592b;
+  --over-soft: #fbe6d9;
   --danger: #b3261e;
-  --live: #1f8a4c;
+  --live: #2c8a5e;
   --font-display: -apple-system, "SF Pro Display", system-ui, "Segoe UI", Roboto, sans-serif;
   --font-body: -apple-system, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #11171c; --surface: #19222a; --ink: #e6edf2; --muted: #93a2ae; --line: #2a3640;
-    --accent: #4fb8be; --accent-ink: #0b1418; --accent-soft: #1b3a3e;
-    --over: #e59a62; --over-soft: #3d2a1d; --danger: #f2877f; --live: #5fd08f;
+    --bg: #1f1419; --surface: #2b1c23; --ink: #f7e6ee; --muted: #c39cae; --line: #422c36;
+    --accent: #f5a3c0; --accent-ink: #2a0f1b; --accent-soft: #4a2433;
+    --over: #f0a173; --over-soft: #452a1e; --danger: #f2877f; --live: #6fd39b;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #11171c; --surface: #19222a; --ink: #e6edf2; --muted: #93a2ae; --line: #2a3640;
-  --accent: #4fb8be; --accent-ink: #0b1418; --accent-soft: #1b3a3e;
-  --over: #e59a62; --over-soft: #3d2a1d; --danger: #f2877f; --live: #5fd08f;
+  --bg: #1f1419; --surface: #2b1c23; --ink: #f7e6ee; --muted: #c39cae; --line: #422c36;
+  --accent: #f5a3c0; --accent-ink: #2a0f1b; --accent-soft: #4a2433;
+  --over: #f0a173; --over-soft: #452a1e; --danger: #f2877f; --live: #6fd39b;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -65,7 +65,9 @@ body {
   display: grid; gap: 28px;
 }
 h1, h2 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
-h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.01em; }
+h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.01em; color: var(--accent); line-height: 1.1; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand img { width: 60px; height: 60px; flex: none; border-radius: 16px; background: var(--accent-soft); padding: 3px; box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 18%, transparent); }
 h2 { font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
 .mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
@@ -102,7 +104,7 @@ button { cursor: pointer; }
 .punch {
   font-family: var(--font-display); font-weight: 800; font-size: 1.05rem;
   letter-spacing: 0.04em; text-transform: uppercase;
-  padding: 16px 28px; border-radius: 8px; border: 2px solid var(--accent);
+  padding: 16px 28px; border-radius: 14px; border: 2px solid var(--accent);
   background: var(--accent); color: var(--accent-ink);
 }
 .clock.on .punch { background: transparent; color: var(--accent); }
@@ -270,9 +272,12 @@ table.earn td .linkbtn { font: inherit; font-family: var(--font-body); font-size
 <body>
 <div class="wrap">
   <header class="top">
-    <div>
-      <h1>Shift Log</h1>
-      <div class="muted" id="todayLine"></div>
+    <div class="brand">
+      <img src="icons/logo.png" alt="" width="60" height="60">
+      <div>
+        <h1>Shift Log</h1>
+        <div class="muted" id="todayLine"></div>
+      </div>
     </div>
     <div class="store-note" id="storeNote">Saved on this device</div>
   </header>
