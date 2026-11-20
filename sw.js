@@ -1,5 +1,5 @@
 // Shift Log offline cache. Bump VERSION whenever you upload changed files.
-const VERSION = "shift-log-v1";
+const VERSION = "shift-log-v2";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {

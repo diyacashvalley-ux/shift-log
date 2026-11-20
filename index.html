@@ -170,9 +170,37 @@ button { cursor: pointer; }
   background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 0.9rem;
   z-index: 20;
 }
+.clock-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.clock-extra { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: 0.88rem; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 12px; }
+.clock-extra input { font-size: 16px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); min-height: 34px; }
+.earned { font-family: var(--font-mono); font-size: 0.95rem; color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.clock.onbreak .dot { background: var(--over); box-shadow: 0 0 0 4px color-mix(in srgb, var(--over) 22%, transparent); }
+.summary .pay-tile { background: var(--accent-soft); }
+.summary .pay-tile .big { color: var(--accent); }
+.day .dpay { font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+.amt { text-align: right; display: grid; gap: 0; }
+.amt .pay { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+.ot-tag { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; color: var(--over); background: var(--over-soft); border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: 1px; }
+.earn-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.earn-tiles > div { display: grid; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.earn-tiles .big { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+table.earn { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 420px; }
+table.earn th, table.earn td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.earn th:first-child, table.earn td:first-child { text-align: left; }
+table.earn th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; background: var(--bg); }
+table.earn td { font-family: var(--font-mono); font-size: 0.9rem; }
+table.earn td:first-child { font-family: var(--font-body); }
+table.earn td.paycol { color: var(--accent); font-weight: 600; }
+table.earn tbody tr { cursor: pointer; }
+table.earn tbody tr:hover { background: var(--accent-soft); }
+table.earn tbody tr.cur td:first-child { font-weight: 600; }
+table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg); }
+.head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 520px) {
   .clock .time { font-size: 2.1rem; }
-  .punch { width: 100%; }
+  .clock-actions { width: 100%; }
+  .clock-actions .punch { flex: 1; }
   .day { grid-template-rows: auto 80px auto; }
   .day .ddate { display: none; }
   .summary .big { font-size: 1.35rem; }
@@ -197,8 +225,17 @@ button { cursor: pointer; }
     <div class="readout">
       <div class="status"><span class="dot"></span><span id="clockStatus">Off the clock</span></div>
       <div class="time" id="clockTime">0:00:00</div>
+      <div class="earned" id="clockEarned"></div>
     </div>
-    <button class="punch" id="punchBtn" type="button">Clock in</button>
+    <div class="clock-actions">
+      <button class="btn" id="breakBtn" type="button" hidden>Start break</button>
+      <button class="punch" id="punchBtn" type="button">Clock in</button>
+    </div>
+    <div class="clock-extra" id="clockExtra" hidden>
+      <label for="adjStart">Forgot to clock in? Start time</label>
+      <input type="time" id="adjStart">
+      <span id="breakInfo"></span>
+    </div>
   </section>
 
   <section aria-labelledby="weekTitle">
@@ -228,10 +265,11 @@ button { cursor: pointer; }
         <span class="big" id="sumOver">0.00</span>
         <span class="sub" id="overSub">over 40 h</span>
       </div>
-      <div>
-        <span class="label">Est. pay</span>
+      <div class="pay-tile">
+        <span class="label">Pay this week</span>
         <span class="big" id="sumPay">—</span>
-        <span class="sub" id="paySub">set your hourly rate below</span>
+        <span class="sub" id="paySub"></span>
+        <span class="sub" id="payProj"></span>
       </div>
     </div>
     <div class="days" id="days"></div>
@@ -251,6 +289,7 @@ button { cursor: pointer; }
         <span class="calc" id="fCalc">Fill in start and end to see the length</span>
         <div style="display:flex;gap:8px">
           <button type="button" class="btn" id="cancelEdit" hidden>Cancel</button>
+          <button type="button" class="btn" id="sameAsLast">Same as last shift</button>
           <button type="submit" class="btn primary" id="saveBtn">Add shift</button>
         </div>
       </div>
@@ -266,10 +305,30 @@ button { cursor: pointer; }
     <div class="log" id="log"></div>
   </section>
 
+  <section class="panel" aria-labelledby="earnTitle">
+    <div class="week-head">
+      <h2 id="earnTitle">Weekly earnings</h2>
+      <span class="store-note">Gross pay, before tax and deductions</span>
+    </div>
+    <div class="earn-tiles">
+      <div><span class="label" id="monthLabel">This month</span><span class="big" id="monthPay">$0.00</span><span class="sub muted" id="monthHrs">0.00 h</span></div>
+      <div><span class="label" id="yearLabel">This year</span><span class="big" id="yearPay">$0.00</span><span class="sub muted" id="yearHrs">0.00 h</span></div>
+      <div><span class="label">Average week</span><span class="big" id="avgPay">$0.00</span><span class="sub muted" id="avgHrs">over weeks you worked</span></div>
+    </div>
+    <div class="table-wrap">
+      <table class="earn">
+        <thead><tr><th scope="col">Week</th><th scope="col">Shifts</th><th scope="col">Hours</th><th scope="col">Overtime</th><th scope="col">Pay</th></tr></thead>
+        <tbody id="earnBody"></tbody>
+        <tfoot id="earnFoot"></tfoot>
+      </table>
+    </div>
+    <button class="btn" id="earnMore" type="button" hidden>Show all weeks</button>
+  </section>
+
   <section class="panel" aria-labelledby="setTitle">
     <h2 id="setTitle">Settings</h2>
     <form class="settings" id="settingsForm">
-      <label class="field"><span class="label">Hourly rate (CAD)</span><input type="number" id="sRate" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+      <label class="field"><span class="label">Hourly rate (CAD)</span><input type="number" id="sRate" min="0" step="0.01" inputmode="decimal" placeholder="19.00"></label>
       <label class="field"><span class="label">Weekly target (h)</span><input type="number" id="sGoal" min="1" max="168" step="0.5" value="40" inputmode="decimal"></label>
       <label class="field"><span class="label">Overtime after (h)</span><input type="number" id="sOT" min="1" max="168" step="0.5" value="40" inputmode="decimal"></label>
       <button class="btn" type="submit">Save settings</button>
@@ -293,7 +352,8 @@ button { cursor: pointer; }
 (() => {
   const $ = (id) => document.getElementById(id);
   const DAY_MS = 86400000;
-  const DEFAULT_SETTINGS = { rate: 0, goal: 40, otAfter: 40, clockIn: null };
+  const DEFAULT_SETTINGS = { rate: 19, goal: 40, otAfter: 40, clockIn: null, breakStart: null, breakAcc: 0 };
+  const OT_MULT = 1.5;
 
   // ---------- state ----------
   let shifts = [];          // {id, date, start, end, breakMin, note}
@@ -302,6 +362,7 @@ button { cursor: pointer; }
   let selectedDate = isoDate(new Date());
   let editingId = null;
   let store = null;
+  let showAllWeeks = false;
 
   // ---------- date helpers ----------
   function pad(n) { return String(n).padStart(2, "0"); }
@@ -320,7 +381,11 @@ button { cursor: pointer; }
   function fmtDec(min) { return (min / 60).toFixed(2); }
   function fmtClock(ms) { const s = Math.floor(ms / 1000); return Math.floor(s / 3600) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60); }
   function fmt12(t) { const [h, m] = t.split(":").map(Number); return ((h + 11) % 12 + 1) + ":" + pad(m) + (h < 12 ? " am" : " pm"); }
-  const money = (n) => { try { return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n) + " CAD"; } catch { return "$" + n.toFixed(2) + " CAD"; } };
+  const cad = (() => { try { return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }); } catch { return null; } })();
+  const cad0 = (() => { try { return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }); } catch { return null; } })();
+  const money = (n) => cad ? cad.format(n) : "$" + n.toFixed(2);
+  const money0 = (n) => cad0 ? cad0.format(n) : "$" + Math.round(n);
+  const monthFmt = new Intl.DateTimeFormat(undefined, { month: "long" });
   const dayFmt = new Intl.DateTimeFormat(undefined, { weekday: "short" });
   const shortFmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
   const longFmt = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
@@ -344,7 +409,9 @@ button { cursor: pointer; }
   }
   function apply(v) {
     shifts = (v.shifts || []).slice();
-    settings = { ...DEFAULT_SETTINGS, ...(v.settings || {}) };
+    const saved = v.settings || {};
+    settings = { ...DEFAULT_SETTINGS, ...saved };
+    if (!saved.rateSet && !Number(saved.rate)) settings.rate = 19;
     delete settings.kind;
     syncSettingsForm();
     render();
@@ -370,11 +437,40 @@ button { cursor: pointer; }
   function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2400); }
 
   // ---------- render ----------
+  const rate = () => Number(settings.rate) || 0;
+  const otMin = () => (Number(settings.otAfter) || 40) * 60;
+  function payFor(regMin, overMin) { return (regMin + overMin * OT_MULT) / 60 * rate(); }
+  function weekPay(totalMin) { const reg = Math.min(totalMin, otMin()); return payFor(reg, totalMin - reg); }
+
+  // Each shift's pay, with weekly overtime given to the shifts that cross the threshold.
+  function shiftPays() {
+    const byWeek = new Map();
+    shifts.forEach((s) => { const k = isoDate(mondayOf(parseDate(s.date))); if (!byWeek.has(k)) byWeek.set(k, []); byWeek.get(k).push(s); });
+    const out = new Map();
+    byWeek.forEach((list) => {
+      let acc = 0;
+      list.slice().sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start)).forEach((s) => {
+        const m = shiftMinutes(s);
+        const reg = Math.max(0, Math.min(m, otMin() - acc));
+        out.set(s.id, { min: m, overMin: m - reg, pay: payFor(reg, m - reg) });
+        acc += m;
+      });
+    });
+    return out;
+  }
+
+  function breakSoFar() {
+    let b = Number(settings.breakAcc) || 0;
+    if (settings.breakStart) b += (Date.now() - new Date(settings.breakStart).getTime()) / 60000;
+    return b;
+  }
+  function liveWorked() {
+    if (!settings.clockIn) return 0;
+    return Math.max(0, (Date.now() - new Date(settings.clockIn).getTime()) / 60000 - breakSoFar());
+  }
   function liveMinutesFor(dateStr) {
     if (!settings.clockIn) return 0;
-    const start = new Date(settings.clockIn);
-    if (isoDate(start) !== dateStr) return 0;
-    return Math.max(0, (Date.now() - start.getTime()) / 60000);
+    return isoDate(new Date(settings.clockIn)) === dateStr ? liveWorked() : 0;
   }
 
   function render() {
@@ -398,7 +494,7 @@ button { cursor: pointer; }
     const totalMin = perDay.reduce((a, x) => a + x.logged + x.live, 0);
     const goal = Number(settings.goal) || 40;
     const ot = Number(settings.otAfter) || 40;
-    const rate = Number(settings.rate) || 0;
+    const pays = shiftPays();
 
     $("sumHours").textContent = fmtDec(totalMin);
     $("sumHM").textContent = fmtHM(totalMin) + (settings.clockIn && perDay.some((x) => x.live) ? " · incl. current shift" : "");
@@ -411,11 +507,11 @@ button { cursor: pointer; }
     $("sumOver").textContent = fmtDec(overMin);
     $("sumOver").classList.toggle("over", overMin > 0);
     $("overSub").textContent = "over " + ot + " h";
-    if (rate > 0) {
-      const regular = Math.min(totalMin, ot * 60) / 60, extra = overMin / 60;
-      $("sumPay").textContent = money(regular * rate + extra * rate * 1.5);
-      $("paySub").textContent = money(rate) + "/h · overtime at 1.5×";
-    } else { $("sumPay").textContent = "—"; $("paySub").textContent = "set your hourly rate below"; }
+    if (rate() > 0) {
+      $("sumPay").textContent = money(weekPay(totalMin));
+      $("paySub").textContent = money(rate()) + "/h" + (overMin > 0 ? " · incl. " + fmtDec(overMin) + " h overtime" : " · before tax");
+      $("payProj").textContent = left > 0 ? "At " + goal + " h: " + money(weekPay(goal * 60)) : "Target reached";
+    } else { $("sumPay").textContent = "—"; $("paySub").textContent = "Set your hourly rate in Settings"; $("payProj").textContent = ""; }
 
     // day bars
     const maxMin = Math.max(10 * 60, ...perDay.map((x) => x.logged + x.live));
@@ -431,7 +527,7 @@ button { cursor: pointer; }
       b.innerHTML =
         '<span class="dname"></span>' +
         '<span class="bar-track"><span class="goal"></span><span class="bar"></span></span>' +
-        '<span><span class="dval"></span><br><span class="ddate"></span></span>';
+        '<span><span class="dval"></span><br><span class="dpay"></span><br><span class="ddate"></span></span>';
       b.querySelector(".dname").textContent = dayFmt.format(x.d);
       b.querySelector(".goal").style.bottom = Math.min(100, (goalLine / maxMin) * 100) + "%";
       const bar = b.querySelector(".bar");
@@ -439,6 +535,8 @@ button { cursor: pointer; }
       if (x.live) bar.classList.add("live");
       b.querySelector(".dval").textContent = mins ? (mins / 60).toFixed(1) + "h" : "–";
       b.querySelector(".ddate").textContent = x.d.getDate();
+      const dayPay = weekShifts.filter((s) => s.date === x.ds).reduce((a, s) => a + pays.get(s.id).pay, 0) + (x.live ? x.live / 60 * rate() : 0);
+      b.querySelector(".dpay").textContent = mins && rate() ? money0(dayPay) : "\u00a0";
       b.addEventListener("click", () => { selectedDate = x.ds; if (!editingId) $("fDate").value = x.ds; updateCalc(); render(); });
       daysEl.appendChild(b);
     });
@@ -464,19 +562,23 @@ button { cursor: pointer; }
       head.className = "log-day-head";
       head.innerHTML = "<span></span><span class='num'></span>";
       head.children[0].textContent = longFmt.format(x.d);
-      head.children[1].textContent = fmtHM(x.logged);
+      const dp = list.reduce((a, s) => a + pays.get(s.id).pay, 0);
+      head.children[1].textContent = fmtHM(x.logged) + (rate() ? " · " + money(dp) : "");
       g.appendChild(head);
       list.forEach((s) => {
         const r = document.createElement("div");
         r.className = "row";
-        r.innerHTML = "<div><div class='span'></div><div class='note'></div></div><div class='hrs'></div><div class='acts'></div>";
+        r.innerHTML = "<div><div class='span'></div><div class='note'></div></div><div class='amt'><div class='hrs'></div><div class='pay'></div></div><div class='acts'></div>";
         const overnight = toMin(s.end) <= toMin(s.start);
         r.querySelector(".span").textContent = fmt12(s.start) + " – " + fmt12(s.end) + (overnight ? " (+1 day)" : "");
         const bits = [];
         if (Number(s.breakMin)) bits.push(s.breakMin + " min break");
         if (s.note) bits.push(s.note);
         r.querySelector(".note").textContent = bits.join(" · ");
-        r.querySelector(".hrs").textContent = fmtDec(shiftMinutes(s)) + " h";
+        const sp = pays.get(s.id);
+        r.querySelector(".hrs").textContent = fmtDec(sp.min) + " h";
+        r.querySelector(".pay").textContent = rate() ? money(sp.pay) : "";
+        if (sp.overMin > 0) { const t = document.createElement("span"); t.className = "ot-tag"; t.textContent = "OT " + fmtDec(sp.overMin) + "h"; t.style.marginLeft = "0"; t.style.marginRight = "6px"; r.querySelector(".note").prepend(t); }
         const acts = r.querySelector(".acts");
         const ed = document.createElement("button");
         ed.type = "button"; ed.className = "btn ghost"; ed.textContent = "Edit";
@@ -494,23 +596,102 @@ button { cursor: pointer; }
       log.appendChild(g);
     });
 
+    renderEarnings(pays);
     renderClock();
   }
+
+  // ---------- weekly earnings ----------
+  function renderEarnings(pays) {
+    const now = new Date();
+    const curWeek = isoDate(mondayOf(now));
+    const weeks = new Map();
+    shifts.forEach((s) => {
+      const k = isoDate(mondayOf(parseDate(s.date)));
+      const w = weeks.get(k) || { n: 0, min: 0, over: 0, pay: 0 };
+      const p = pays.get(s.id);
+      w.n++; w.min += p.min; w.over += p.overMin; w.pay += p.pay;
+      weeks.set(k, w);
+    });
+    const keys = [...weeks.keys()].sort().reverse();
+
+    const ym = now.getFullYear() + "-" + pad(now.getMonth() + 1);
+    let mPay = 0, mMin = 0, yPay = 0, yMin = 0;
+    shifts.forEach((s) => {
+      const p = pays.get(s.id);
+      if (s.date.startsWith(ym)) { mPay += p.pay; mMin += p.min; }
+      if (s.date.startsWith(String(now.getFullYear()))) { yPay += p.pay; yMin += p.min; }
+    });
+    $("monthLabel").textContent = monthFmt.format(now);
+    $("monthPay").textContent = money(mPay); $("monthHrs").textContent = fmtDec(mMin) + " h";
+    $("yearLabel").textContent = String(now.getFullYear());
+    $("yearPay").textContent = money(yPay); $("yearHrs").textContent = fmtDec(yMin) + " h";
+    const full = keys.filter((k) => k !== curWeek);
+    const basis = full.length ? full : keys;
+    const avgP = basis.length ? basis.reduce((a, k) => a + weeks.get(k).pay, 0) / basis.length : 0;
+    const avgM = basis.length ? basis.reduce((a, k) => a + weeks.get(k).min, 0) / basis.length : 0;
+    $("avgPay").textContent = money(avgP);
+    $("avgHrs").textContent = basis.length ? fmtDec(avgM) + " h · " + basis.length + (basis.length === 1 ? " week" : " weeks") : "over weeks you worked";
+
+    const body = $("earnBody"), foot = $("earnFoot");
+    body.innerHTML = ""; foot.innerHTML = "";
+    if (!keys.length) {
+      body.innerHTML = "<tr><td colspan='5' class='muted' style='text-align:center;font-family:var(--font-body)'>Your weekly pay will show here after your first shift.</td></tr>";
+      $("earnMore").hidden = true;
+      return;
+    }
+    const shown = showAllWeeks ? keys : keys.slice(0, 8);
+    shown.forEach((k) => {
+      const w = weeks.get(k), d = parseDate(k);
+      const tr = document.createElement("tr");
+      if (k === curWeek) tr.className = "cur";
+      tr.innerHTML = "<td></td><td></td><td></td><td></td><td class='paycol'></td>";
+      tr.children[0].textContent = (k === curWeek ? "This week · " : "") + shortFmt.format(d) + " – " + shortFmt.format(addDays(d, 6));
+      tr.children[1].textContent = w.n;
+      tr.children[2].textContent = fmtDec(w.min);
+      tr.children[3].textContent = w.over ? fmtDec(w.over) : "–";
+      tr.children[4].textContent = money(w.pay);
+      tr.tabIndex = 0;
+      const go = () => { weekStart = d; render(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      tr.addEventListener("click", go);
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+      body.appendChild(tr);
+    });
+    const t = shown.reduce((a, k) => { const w = weeks.get(k); a.n += w.n; a.min += w.min; a.over += w.over; a.pay += w.pay; return a; }, { n: 0, min: 0, over: 0, pay: 0 });
+    foot.innerHTML = "<tr><td></td><td></td><td></td><td></td><td class='paycol'></td></tr>";
+    const fr = foot.firstChild;
+    fr.children[0].textContent = "Total (" + shown.length + (shown.length === 1 ? " week)" : " weeks)");
+    fr.children[1].textContent = t.n; fr.children[2].textContent = fmtDec(t.min);
+    fr.children[3].textContent = t.over ? fmtDec(t.over) : "–"; fr.children[4].textContent = money(t.pay);
+    $("earnMore").hidden = keys.length <= 8;
+    $("earnMore").textContent = showAllWeeks ? "Show recent weeks" : "Show all " + keys.length + " weeks";
+  }
+  $("earnMore").addEventListener("click", () => { showAllWeeks = !showAllWeeks; render(); });
 
   // ---------- punch clock ----------
   function renderClock() {
     const on = !!settings.clockIn;
     $("clock").classList.toggle("on", on);
+    const onBreak = on && !!settings.breakStart;
+    $("clock").classList.toggle("onbreak", onBreak);
     $("punchBtn").textContent = on ? "Clock out" : "Clock in";
+    $("breakBtn").hidden = !on;
+    $("breakBtn").textContent = onBreak ? "End break" : "Start break";
+    $("clockExtra").hidden = !on;
     if (on) {
       const st = new Date(settings.clockIn);
-      $("clockStatus").textContent = "On the clock since " + fmt12(hhmm(st)) + (isoDate(st) !== isoDate(new Date()) ? " (" + shortFmt.format(st) + ")" : "");
-      $("clockTime").textContent = fmtClock(Date.now() - st.getTime());
+      const worked = liveWorked();
+      $("clockStatus").textContent = (onBreak ? "On break · " : "On the clock since ") + (onBreak ? "started " + fmt12(hhmm(new Date(settings.breakStart))) : fmt12(hhmm(st)) + (isoDate(st) !== isoDate(new Date()) ? " (" + shortFmt.format(st) + ")" : ""));
+      $("clockTime").textContent = fmtClock(worked * 60000);
+      $("clockEarned").textContent = rate() ? "Earned so far: " + money(worked / 60 * rate()) : "";
+      const b = breakSoFar();
+      $("breakInfo").textContent = b >= 1 ? "Break so far: " + fmtHM(b) + " (unpaid)" : "";
+      if (document.activeElement !== $("adjStart")) $("adjStart").value = hhmm(st);
     } else {
       $("clockStatus").textContent = "Off the clock";
       const todayMin = shifts.filter((s) => s.date === isoDate(new Date())).reduce((a, s) => a + shiftMinutes(s), 0);
       $("clockTime").textContent = fmtClock(todayMin * 60000);
       $("clockStatus").textContent = todayMin ? "Off the clock · logged today" : "Off the clock";
+      $("clockEarned").textContent = todayMin && rate() ? "Today: " + money(shifts.filter((s) => s.date === isoDate(new Date())).reduce((a, s) => a + shiftPays().get(s.id).pay, 0)) : "";
     }
   }
   setInterval(() => { if (settings.clockIn) render(); }, 1000);
@@ -518,19 +699,48 @@ button { cursor: pointer; }
   $("punchBtn").addEventListener("click", async () => {
     if (!store) return;
     if (!settings.clockIn) {
-      const next = { ...settings, clockIn: new Date().toISOString() };
+      const next = { ...settings, clockIn: new Date().toISOString(), breakStart: null, breakAcc: 0 };
       settings = next; render();
       await guarded(store.saveSettings(next), "Clocked in");
     } else {
       const st = new Date(settings.clockIn), now = new Date();
-      const shift = { id: newId(), date: isoDate(st), start: hhmm(st), end: hhmm(now), breakMin: 0, note: "" };
-      const next = { ...settings, clockIn: null };
+      const brk = Math.round(breakSoFar());
+      const shift = { id: newId(), date: isoDate(st), start: hhmm(st), end: hhmm(now), breakMin: brk, note: "" };
+      const worked = shiftMinutes(shift);
+      const next = { ...settings, clockIn: null, breakStart: null, breakAcc: 0 };
       settings = next;
-      if (now - st >= 60000) await guarded(store.saveShift(shift));
-      await guarded(store.saveSettings(next), now - st >= 60000 ? "Clocked out · " + fmtHM((now - st) / 60000) + " logged" : "Clocked out (under a minute, not logged)");
+      const keep = now - st >= 60000 && worked > 0;
+      if (keep) await guarded(store.saveShift(shift));
+      await guarded(store.saveSettings(next), keep ? "Clocked out · " + fmtHM(worked) + (rate() ? " · " + money(worked / 60 * rate()) : "") : "Clocked out (under a minute, not logged)");
       weekStart = mondayOf(st);
       render();
     }
+  });
+
+  $("breakBtn").addEventListener("click", async () => {
+    if (!settings.clockIn) return;
+    let next;
+    if (settings.breakStart) {
+      const add = (Date.now() - new Date(settings.breakStart).getTime()) / 60000;
+      next = { ...settings, breakStart: null, breakAcc: (Number(settings.breakAcc) || 0) + add };
+    } else {
+      next = { ...settings, breakStart: new Date().toISOString() };
+    }
+    settings = next; render();
+    await guarded(store.saveSettings(next), next.breakStart ? "Break started" : "Break ended · back on the clock");
+  });
+
+  $("adjStart").addEventListener("change", async () => {
+    const v = $("adjStart").value;
+    if (!v || !settings.clockIn) return;
+    const old = new Date(settings.clockIn);
+    const [h, m] = v.split(":").map(Number);
+    let d = new Date(old.getFullYear(), old.getMonth(), old.getDate(), h, m);
+    if (d > new Date()) d = addDays(d, -1);
+    if (new Date() - d > 20 * 3600000) { toast("That start time is too far back. Add the shift with the form instead."); render(); return; }
+    const next = { ...settings, clockIn: d.toISOString() };
+    settings = next; render();
+    await guarded(store.saveSettings(next), "Start time changed to " + fmt12(v));
   });
 
   // ---------- form ----------
@@ -538,8 +748,14 @@ button { cursor: pointer; }
     const s = { start: $("fStart").value, end: $("fEnd").value, breakMin: $("fBreak").value };
     if (!s.start || !s.end) { $("fCalc").textContent = "Fill in start and end to see the length"; return; }
     const m = shiftMinutes(s);
-    $("fCalc").textContent = fmtHM(m) + " (" + fmtDec(m) + " h)" + (toMin(s.end) <= toMin(s.start) ? " · ends next day" : "");
+    $("fCalc").textContent = fmtHM(m) + " (" + fmtDec(m) + " h)" + (rate() ? " · " + money(m / 60 * rate()) : "") + (toMin(s.end) <= toMin(s.start) ? " · ends next day" : "");
   }
+  $("sameAsLast").addEventListener("click", () => {
+    const last = shifts.slice().sort((a, b) => (b.date + b.start).localeCompare(a.date + a.start))[0];
+    if (!last) { toast("No shifts yet. Add your first one by hand."); return; }
+    $("fStart").value = last.start; $("fEnd").value = last.end; $("fBreak").value = last.breakMin || 0;
+    updateCalc();
+  });
   ["fStart", "fEnd", "fBreak"].forEach((id) => $(id).addEventListener("input", updateCalc));
 
   function resetForm() {
@@ -597,6 +813,7 @@ button { cursor: pointer; }
     const next = {
       ...settings,
       rate: Math.max(0, Number($("sRate").value) || 0),
+      rateSet: true,
       goal: Math.min(168, Math.max(1, Number($("sGoal").value) || 40)),
       otAfter: Math.min(168, Math.max(1, Number($("sOT").value) || 40)),
     };
@@ -634,10 +851,12 @@ button { cursor: pointer; }
     const inWeek = new Set([...Array(7)].map((_, i) => isoDate(addDays(weekStart, i))));
     const rows = shifts.filter((s) => inWeek.has(s.date)).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
     const esc = (v) => '"' + String(v).replace(/"/g, '""') + '"';
-    const lines = [["Date", "Start", "End", "Break (min)", "Hours", "Note"].join(",")]
-      .concat(rows.map((s) => [s.date, s.start, s.end, s.breakMin || 0, fmtDec(shiftMinutes(s)), esc(s.note || "")].join(",")));
-    const total = rows.reduce((a, s) => a + shiftMinutes(s), 0);
-    lines.push(["Total", "", "", "", fmtDec(total), ""].join(","));
+    const pays = shiftPays();
+    const lines = [["Date", "Start", "End", "Break (min)", "Hours", "Overtime hours", "Pay (CAD)", "Note"].join(",")]
+      .concat(rows.map((s) => { const p = pays.get(s.id); return [s.date, s.start, s.end, s.breakMin || 0, fmtDec(p.min), fmtDec(p.overMin), p.pay.toFixed(2), esc(s.note || "")].join(","); }));
+    const total = rows.reduce((a, s) => a + pays.get(s.id).min, 0);
+    const totalPay = rows.reduce((a, s) => a + pays.get(s.id).pay, 0);
+    lines.push(["Total", "", "", "", fmtDec(total), "", totalPay.toFixed(2), ""].join(","));
     await saveFile("shifts-week-of-" + isoDate(weekStart) + ".csv", lines.join("\n"), "text/csv");
   });
 
