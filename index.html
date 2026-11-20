@@ -48,6 +48,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; min-height: 100vh;
@@ -58,7 +59,7 @@ body {
 .wrap {
   max-width: 880px; margin: 0 auto;
   padding-top: calc(20px + env(safe-area-inset-top, 0px));
-  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   display: grid; gap: 28px;
@@ -166,9 +167,9 @@ button { cursor: pointer; }
 .settings .field { width: 150px; }
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%);
-  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 0.9rem;
-  z-index: 20;
+  z-index: 20; pointer-events: none;
 }
 .clock-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .clock-extra { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: 0.88rem; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 12px; }
@@ -197,6 +198,61 @@ table.earn tbody tr:hover { background: var(--accent-soft); }
 table.earn tbody tr.cur td:first-child { font-weight: 600; }
 table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg); }
 .head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.view { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr); }
+.wrap, .panel { grid-template-columns: minmax(0, 1fr); }
+.table-wrap { max-width: 100%; min-width: 0; }
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 15;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: max(8px, env(safe-area-inset-left, 0px));
+  padding-right: max(8px, env(safe-area-inset-right, 0px));
+}
+.tab { background: none; border: 0; padding: 8px 0 6px; display: grid; justify-items: center; gap: 2px; font-size: 0.72rem; font-weight: 600; color: var(--muted); position: relative; }
+.tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tab[aria-selected="true"] { color: var(--accent); }
+.tab .badge { position: absolute; top: 4px; left: calc(50% + 8px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--over); color: #fff; font-size: 0.68rem; line-height: 18px; text-align: center; }
+
+.row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; }
+.row .acts { justify-self: end; }
+.paidbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+.switch input {
+  -webkit-appearance: none; appearance: none; margin: 0; flex: none;
+  width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; cursor: pointer;
+}
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.switch input:checked { background: var(--live); }
+.switch input:checked::after { left: 21px; }
+@media (prefers-reduced-motion: no-preference) { .switch input, .switch input::after { transition: all 0.15s ease; } }
+.st-paid { color: var(--live); }
+.st-pend { color: var(--over); }
+.st-up { color: var(--muted); }
+.paid-date { font-size: 16px; padding: 2px 6px; min-height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); max-width: 100%; }
+.pay-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.pay-tiles > div { display: grid; gap: 2px; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); }
+.pay-tiles .big { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.pay-tiles .t-pend { background: var(--over-soft); border-color: transparent; }
+.pay-tiles .t-pend .big { color: var(--over); }
+.pay-tiles .t-recv .big { color: var(--live); }
+.pay-tiles .sub { font-size: 0.82rem; color: var(--muted); }
+.plist { display: grid; }
+.prow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 0; }
+.prow + .prow { border-top: 1px dashed var(--line); }
+.prow .when { font-weight: 600; }
+.prow .det { font-size: 0.85rem; color: var(--muted); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.prow .amt2 { font-family: var(--font-mono); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.prow .paidbar { grid-column: 1 / -1; }
+.age { white-space: nowrap; display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; border-radius: 4px; padding: 1px 6px; margin-left: 6px; background: var(--over-soft); color: var(--over); vertical-align: 1px; }
+.age.up { background: var(--accent-soft); color: var(--accent); }
+.rp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.rp-preview { font-family: var(--font-mono); font-size: 0.9rem; color: var(--muted); }
+table.earn td.paidcol { color: var(--live); }
+table.earn td.pendcol { color: var(--over); font-weight: 600; }
+table.earn td .linkbtn { font: inherit; font-family: var(--font-body); font-size: 0.85rem; background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 4px; }
+.rate-card { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; padding: 14px 16px; border-radius: 10px; background: var(--accent-soft); }
+.rate-card .big { font-family: var(--font-mono); font-size: 1.8rem; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
 @media (max-width: 520px) {
   .clock .time { font-size: 2.1rem; }
   .clock-actions { width: 100%; }
@@ -221,6 +277,7 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
     <div class="store-note" id="storeNote">Saved on this device</div>
   </header>
 
+  <div class="view" data-view="today" id="view-today">
   <section class="clock" id="clock" aria-label="Punch clock">
     <div class="readout">
       <div class="status"><span class="dot"></span><span id="clockStatus">Off the clock</span></div>
@@ -275,6 +332,18 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
     <div class="days" id="days"></div>
   </section>
 
+  </div>
+
+  <div class="view" data-view="shifts" id="view-shifts" hidden>
+  <div class="week-head">
+    <h2>Shifts</h2>
+    <div class="week-nav">
+      <button class="btn ghost" id="prevWeek2" type="button" aria-label="Previous week">&larr;</button>
+      <span class="range" id="weekRange2"></span>
+      <button class="btn ghost" id="nextWeek2" type="button" aria-label="Next week">&rarr;</button>
+      <button class="btn ghost" id="thisWeek2" type="button">Today</button>
+    </div>
+  </div>
   <section class="panel" aria-labelledby="formTitle">
     <h2 id="formTitle">Add a shift</h2>
     <form id="shiftForm" novalidate>
@@ -304,6 +373,48 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
     </div>
     <div class="log" id="log"></div>
   </section>
+  </div>
+
+  <div class="view" data-view="pay" id="view-pay" hidden>
+  <section aria-labelledby="payTitle" style="display:grid;gap:12px">
+    <div class="week-head">
+      <h2 id="payTitle">Payments</h2>
+      <span class="store-note">Gross pay, before tax</span>
+    </div>
+    <div class="pay-tiles">
+      <div class="t-pend"><span class="label">Pending (owed to you)</span><span class="big" id="pendAmt">$0.00</span><span class="sub" id="pendSub">Nothing owed</span></div>
+      <div class="t-recv"><span class="label">Received</span><span class="big" id="recvAmt">$0.00</span><span class="sub" id="recvSub"></span></div>
+      <div><span class="label">Upcoming shifts</span><span class="big" id="upAmt">$0.00</span><span class="sub" id="upSub">Scheduled, not worked yet</span></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="rpTitle">
+    <h2 id="rpTitle">Record a payment</h2>
+    <p class="muted" style="margin:0;max-width:60ch">Got paid? Mark every pending shift up to a date as paid in one go. You can also flip the switch on any single shift.</p>
+    <div class="rp-grid">
+      <label class="field"><span class="label">Date you were paid</span><input type="date" id="rpPaidOn"></label>
+      <label class="field"><span class="label">For shifts worked up to</span><input type="date" id="rpUpTo"></label>
+    </div>
+    <div class="form-foot">
+      <span class="rp-preview" id="rpPreview"></span>
+      <button class="btn primary" id="rpBtn" type="button">Mark as paid</button>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="plTitle">
+    <h2 id="plTitle">Waiting to be paid</h2>
+    <div class="plist" id="pendList"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="hTitle">
+    <h2 id="hTitle">Payment history</h2>
+    <div class="table-wrap">
+      <table class="earn">
+        <thead><tr><th scope="col">Paid on</th><th scope="col">Shifts</th><th scope="col">Hours</th><th scope="col">Amount</th><th scope="col" aria-label="Undo"></th></tr></thead>
+        <tbody id="histBody"></tbody>
+      </table>
+    </div>
+  </section>
 
   <section class="panel" aria-labelledby="earnTitle">
     <div class="week-head">
@@ -317,16 +428,20 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
     </div>
     <div class="table-wrap">
       <table class="earn">
-        <thead><tr><th scope="col">Week</th><th scope="col">Shifts</th><th scope="col">Hours</th><th scope="col">Overtime</th><th scope="col">Pay</th></tr></thead>
+        <thead><tr><th scope="col">Week</th><th scope="col">Hours</th><th scope="col">Overtime</th><th scope="col">Pay</th><th scope="col">Paid</th><th scope="col">Unpaid</th></tr></thead>
         <tbody id="earnBody"></tbody>
         <tfoot id="earnFoot"></tfoot>
       </table>
     </div>
     <button class="btn" id="earnMore" type="button" hidden>Show all weeks</button>
   </section>
+  </div>
+
+  <div class="view" data-view="settings" id="view-settings" hidden>
 
   <section class="panel" aria-labelledby="setTitle">
-    <h2 id="setTitle">Settings</h2>
+    <h2 id="setTitle">Pay settings</h2>
+    <div class="rate-card"><span class="label">Your pay rate</span><span class="big" id="rateShow">$19.00</span><span class="muted">per hour · overtime <span id="otShow">$28.50</span>/h after <span id="otAfterShow">40</span> h a week</span></div>
     <form class="settings" id="settingsForm">
       <label class="field"><span class="label">Hourly rate (CAD)</span><input type="number" id="sRate" min="0" step="0.01" inputmode="decimal" placeholder="19.00"></label>
       <label class="field"><span class="label">Weekly target (h)</span><input type="number" id="sGoal" min="1" max="168" step="0.5" value="40" inputmode="decimal"></label>
@@ -345,7 +460,14 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
       <span class="store-note" id="lastBackup"></span>
     </div>
   </section>
+  </div>
 </div>
+<nav class="tabbar" aria-label="Sections">
+  <button class="tab" type="button" data-tab="today" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Today</button>
+  <button class="tab" type="button" data-tab="shifts" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Shifts</button>
+  <button class="tab" type="button" data-tab="pay" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 9.5v5M17.5 9.5v5"/></svg>Pay<span class="badge" id="payBadge" hidden></span></button>
+  <button class="tab" type="button" data-tab="settings" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg>Settings</button>
+</nav>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -401,6 +523,7 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
       kind: "local",
       subscribe(fn) { listeners.push(fn); fn(read()); },
       async saveShift(s) { const v = read(); v.shifts = v.shifts.filter((x) => x.id !== s.id).concat(s); write(v); },
+      async saveShifts(list) { const v = read(); const ids = new Set(list.map((x) => x.id)); v.shifts = v.shifts.filter((x) => !ids.has(x.id)).concat(list); write(v); },
       async removeShift(id) { const v = read(); v.shifts = v.shifts.filter((x) => x.id !== id); write(v); },
       async saveSettings(st) { const v = read(); v.settings = st; write(v); },
       dump: read,
@@ -480,6 +603,7 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
     const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
     const end = days[6];
     $("weekRange").textContent = shortFmt.format(weekStart) + " – " + shortFmt.format(end);
+    $("weekRange2").textContent = $("weekRange").textContent;
     const isCurrent = isoDate(mondayOf(new Date())) === isoDate(weekStart);
     $("weekTitle").textContent = isCurrent ? "This week" : "Week of " + shortFmt.format(weekStart);
     $("logTitle").textContent = isCurrent ? "Shifts this week" : "Shifts, week of " + shortFmt.format(weekStart);
@@ -537,7 +661,7 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
       b.querySelector(".ddate").textContent = x.d.getDate();
       const dayPay = weekShifts.filter((s) => s.date === x.ds).reduce((a, s) => a + pays.get(s.id).pay, 0) + (x.live ? x.live / 60 * rate() : 0);
       b.querySelector(".dpay").textContent = mins && rate() ? money0(dayPay) : "\u00a0";
-      b.addEventListener("click", () => { selectedDate = x.ds; if (!editingId) $("fDate").value = x.ds; updateCalc(); render(); });
+      b.addEventListener("click", () => { selectedDate = x.ds; if (!editingId) $("fDate").value = x.ds; updateCalc(); render(); setView("shifts"); });
       daysEl.appendChild(b);
     });
 
@@ -568,7 +692,8 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
       list.forEach((s) => {
         const r = document.createElement("div");
         r.className = "row";
-        r.innerHTML = "<div><div class='span'></div><div class='note'></div></div><div class='amt'><div class='hrs'></div><div class='pay'></div></div><div class='acts'></div>";
+        r.innerHTML = "<div><div class='span'></div><div class='note'></div></div><div class='amt'><div class='hrs'></div><div class='pay'></div></div><div class='paidbar'></div><div class='acts'></div>";
+        r.querySelector(".paidbar").replaceWith(paidControl(s));
         const overnight = toMin(s.end) <= toMin(s.start);
         r.querySelector(".span").textContent = fmt12(s.start) + " – " + fmt12(s.end) + (overnight ? " (+1 day)" : "");
         const bits = [];
@@ -597,8 +722,164 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
     });
 
     renderEarnings(pays);
+    renderPayments(pays);
+    renderSettingsCard();
     renderClock();
   }
+
+  // ---------- paid / pending ----------
+  const todayIso = () => isoDate(new Date());
+  function statusOf(s) { return s.paidOn ? "paid" : s.date > todayIso() ? "upcoming" : "pending"; }
+  function paidControl(s) {
+    const wrap = document.createElement("div");
+    wrap.className = "paidbar";
+    const lab = document.createElement("label");
+    lab.className = "switch";
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = !!s.paidOn;
+    cb.setAttribute("aria-label", "Paid for shift on " + longFmt.format(parseDate(s.date)));
+    const txt = document.createElement("span");
+    const st = statusOf(s);
+    txt.className = st === "paid" ? "st-paid" : st === "upcoming" ? "st-up" : "st-pend";
+    txt.textContent = st === "paid" ? "Paid on" : st === "upcoming" ? "Upcoming" : "Pending";
+    lab.append(cb, txt);
+    wrap.appendChild(lab);
+    cb.addEventListener("change", async () => {
+      const next = { ...s, paidOn: cb.checked ? todayIso() : null };
+      await guarded(store.saveShift(next), cb.checked ? "Marked paid today · " + money(shiftPays().get(s.id).pay) : "Moved back to pending");
+    });
+    if (s.paidOn) {
+      const d = document.createElement("input");
+      d.type = "date"; d.className = "paid-date"; d.value = s.paidOn;
+      d.setAttribute("aria-label", "Date you were paid");
+      d.addEventListener("change", async () => {
+        if (!d.value) return;
+        await guarded(store.saveShift({ ...s, paidOn: d.value }), "Paid date changed to " + shortFmt.format(parseDate(d.value)));
+      });
+      wrap.appendChild(d);
+    }
+    return wrap;
+  }
+
+  function renderPayments(pays) {
+    const today = todayIso();
+    const ym = today.slice(0, 7);
+    let pend = 0, pendN = 0, pendMin = 0, oldest = null, recv = 0, recvMonth = 0, up = 0, upN = 0;
+    shifts.forEach((s) => {
+      const p = pays.get(s.id), st = statusOf(s);
+      if (st === "paid") { recv += p.pay; if (s.paidOn.startsWith(ym)) recvMonth += p.pay; }
+      else if (st === "pending") { pend += p.pay; pendN++; pendMin += p.min; if (!oldest || s.date < oldest) oldest = s.date; }
+      else { up += p.pay; upN++; }
+    });
+    $("pendAmt").textContent = money(pend);
+    $("pendSub").textContent = pendN ? pendN + (pendN === 1 ? " shift · " : " shifts · ") + fmtDec(pendMin) + " h · since " + shortFmt.format(parseDate(oldest)) : "Nothing owed. You're all paid up.";
+    $("recvAmt").textContent = money(recv);
+    $("recvSub").textContent = "This month: " + money(recvMonth);
+    $("upAmt").textContent = money(up);
+    $("upSub").textContent = upN ? upN + (upN === 1 ? " shift" : " shifts") + " scheduled, not worked yet" : "No future shifts added";
+    const badge = $("payBadge");
+    badge.hidden = !pendN; badge.textContent = pendN;
+
+    // record-a-payment preview
+    if (!$("rpPaidOn").value) $("rpPaidOn").value = today;
+    if (!$("rpUpTo").value) $("rpUpTo").value = today;
+    updatePreview(pays);
+
+    // pending list
+    const list = $("pendList");
+    list.innerHTML = "";
+    const unpaid = shifts.filter((s) => !s.paidOn).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+    if (!unpaid.length) {
+      const e = document.createElement("div"); e.className = "empty";
+      e.textContent = shifts.length ? "Every shift is marked paid." : "Shifts you haven't been paid for will show here.";
+      list.appendChild(e);
+    }
+    unpaid.forEach((s) => {
+      const p = pays.get(s.id);
+      const r = document.createElement("div"); r.className = "prow";
+      r.innerHTML = "<div><div class='when'></div><div class='det'></div></div><div class='amt2'></div>";
+      const when = r.querySelector(".when");
+      when.textContent = longFmt.format(parseDate(s.date));
+      const tag = document.createElement("span");
+      if (s.date > today) { tag.className = "age up"; tag.textContent = "UPCOMING"; }
+      else { const days = Math.round((parseDate(today) - parseDate(s.date)) / DAY_MS); tag.className = "age"; tag.textContent = days === 0 ? "TODAY" : days + (days === 1 ? " DAY" : " DAYS"); }
+      when.appendChild(tag);
+      r.querySelector(".det").textContent = fmt12(s.start) + " – " + fmt12(s.end) + " · " + fmtDec(p.min) + " h" + (s.note ? " · " + s.note : "");
+      r.querySelector(".amt2").textContent = money(p.pay);
+      r.appendChild(paidControl(s));
+      list.appendChild(r);
+    });
+
+    // history
+    const groups = new Map();
+    shifts.filter((s) => s.paidOn).forEach((s) => {
+      const g = groups.get(s.paidOn) || { ids: [], min: 0, pay: 0 };
+      const p = pays.get(s.id); g.ids.push(s.id); g.min += p.min; g.pay += p.pay;
+      groups.set(s.paidOn, g);
+    });
+    const hb = $("histBody"); hb.innerHTML = "";
+    const keys = [...groups.keys()].sort().reverse();
+    if (!keys.length) hb.innerHTML = "<tr><td colspan='5' class='muted' style='text-align:center;font-family:var(--font-body)'>Payments you mark will be listed here.</td></tr>";
+    keys.forEach((k) => {
+      const g = groups.get(k);
+      const tr = document.createElement("tr");
+      tr.style.cursor = "default";
+      tr.innerHTML = "<td></td><td></td><td></td><td class='paidcol'></td><td></td>";
+      tr.children[0].textContent = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" }).format(parseDate(k));
+      tr.children[1].textContent = g.ids.length;
+      tr.children[2].textContent = fmtDec(g.min);
+      tr.children[3].textContent = money(g.pay);
+      const u = document.createElement("button");
+      u.type = "button"; u.className = "linkbtn"; u.textContent = "Undo";
+      u.addEventListener("click", async () => {
+        if (!u.dataset.armed) { u.dataset.armed = "1"; u.textContent = "Tap to confirm"; setTimeout(() => { delete u.dataset.armed; u.textContent = "Undo"; }, 3000); return; }
+        const ids = new Set(g.ids);
+        await guarded(store.saveShifts(shifts.filter((s) => ids.has(s.id)).map((s) => ({ ...s, paidOn: null }))), "Payment undone · " + money(g.pay) + " back to pending");
+      });
+      tr.children[4].appendChild(u);
+      hb.appendChild(tr);
+    });
+  }
+
+  function rpTargets() {
+    const upTo = $("rpUpTo").value;
+    return shifts.filter((s) => !s.paidOn && upTo && s.date <= upTo);
+  }
+  function updatePreview(pays) {
+    pays = pays || shiftPays();
+    const t = rpTargets();
+    const amt = t.reduce((a, s) => a + pays.get(s.id).pay, 0);
+    const min = t.reduce((a, s) => a + pays.get(s.id).min, 0);
+    $("rpPreview").textContent = t.length ? t.length + (t.length === 1 ? " shift · " : " shifts · ") + fmtDec(min) + " h · " + money(amt) : "No unpaid shifts up to that date";
+    $("rpBtn").disabled = !t.length;
+    $("rpBtn").textContent = t.length ? "Mark " + money(amt) + " as paid" : "Mark as paid";
+  }
+  ["rpUpTo", "rpPaidOn"].forEach((id) => $(id).addEventListener("change", () => updatePreview()));
+  $("rpBtn").addEventListener("click", async () => {
+    const paidOn = $("rpPaidOn").value || todayIso();
+    const t = rpTargets();
+    if (!t.length) return;
+    const pays = shiftPays();
+    const amt = t.reduce((a, s) => a + pays.get(s.id).pay, 0);
+    await guarded(store.saveShifts(t.map((s) => ({ ...s, paidOn }))), "Recorded " + money(amt) + " paid on " + shortFmt.format(parseDate(paidOn)));
+  });
+
+  function renderSettingsCard() {
+    $("rateShow").textContent = money(rate());
+    $("otShow").textContent = money(rate() * OT_MULT);
+    $("otAfterShow").textContent = Number(settings.otAfter) || 40;
+  }
+
+  // ---------- tabs ----------
+  const VIEWS = ["today", "shifts", "pay", "settings"];
+  function setView(name, noScroll) {
+    if (!VIEWS.includes(name)) name = "today";
+    VIEWS.forEach((v) => { $("view-" + v).hidden = v !== name; });
+    document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === name)));
+    try { localStorage.setItem("shift-log-tab", name); } catch {}
+    if (!noScroll) window.scrollTo(0, 0);
+  }
+  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => setView(t.dataset.tab)));
 
   // ---------- weekly earnings ----------
   function renderEarnings(pays) {
@@ -607,9 +888,10 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
     const weeks = new Map();
     shifts.forEach((s) => {
       const k = isoDate(mondayOf(parseDate(s.date)));
-      const w = weeks.get(k) || { n: 0, min: 0, over: 0, pay: 0 };
+      const w = weeks.get(k) || { n: 0, min: 0, over: 0, pay: 0, paid: 0, pend: 0 };
       const p = pays.get(s.id);
       w.n++; w.min += p.min; w.over += p.overMin; w.pay += p.pay;
+      if (s.paidOn) w.paid += p.pay; else w.pend += p.pay;
       weeks.set(k, w);
     });
     const keys = [...weeks.keys()].sort().reverse();
@@ -635,7 +917,7 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
     const body = $("earnBody"), foot = $("earnFoot");
     body.innerHTML = ""; foot.innerHTML = "";
     if (!keys.length) {
-      body.innerHTML = "<tr><td colspan='5' class='muted' style='text-align:center;font-family:var(--font-body)'>Your weekly pay will show here after your first shift.</td></tr>";
+      body.innerHTML = "<tr><td colspan='6' class='muted' style='text-align:center;font-family:var(--font-body)'>Your weekly pay will show here after your first shift.</td></tr>";
       $("earnMore").hidden = true;
       return;
     }
@@ -644,24 +926,26 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
       const w = weeks.get(k), d = parseDate(k);
       const tr = document.createElement("tr");
       if (k === curWeek) tr.className = "cur";
-      tr.innerHTML = "<td></td><td></td><td></td><td></td><td class='paycol'></td>";
+      tr.innerHTML = "<td></td><td></td><td></td><td class='paycol'></td><td class='paidcol'></td><td class='pendcol'></td>";
       tr.children[0].textContent = (k === curWeek ? "This week · " : "") + shortFmt.format(d) + " – " + shortFmt.format(addDays(d, 6));
-      tr.children[1].textContent = w.n;
-      tr.children[2].textContent = fmtDec(w.min);
-      tr.children[3].textContent = w.over ? fmtDec(w.over) : "–";
-      tr.children[4].textContent = money(w.pay);
+      tr.children[1].textContent = fmtDec(w.min);
+      tr.children[2].textContent = w.over ? fmtDec(w.over) : "–";
+      tr.children[3].textContent = money(w.pay);
+      tr.children[4].textContent = w.paid ? money(w.paid) : "–";
+      tr.children[5].textContent = w.pend ? money(w.pend) : "✓";
       tr.tabIndex = 0;
-      const go = () => { weekStart = d; render(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      const go = () => { weekStart = d; render(); setView("shifts"); };
       tr.addEventListener("click", go);
       tr.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
       body.appendChild(tr);
     });
-    const t = shown.reduce((a, k) => { const w = weeks.get(k); a.n += w.n; a.min += w.min; a.over += w.over; a.pay += w.pay; return a; }, { n: 0, min: 0, over: 0, pay: 0 });
-    foot.innerHTML = "<tr><td></td><td></td><td></td><td></td><td class='paycol'></td></tr>";
+    const t = shown.reduce((a, k) => { const w = weeks.get(k); a.min += w.min; a.over += w.over; a.pay += w.pay; a.paid += w.paid; a.pend += w.pend; return a; }, { min: 0, over: 0, pay: 0, paid: 0, pend: 0 });
+    foot.innerHTML = "<tr><td></td><td></td><td></td><td class='paycol'></td><td class='paidcol'></td><td class='pendcol'></td></tr>";
     const fr = foot.firstChild;
     fr.children[0].textContent = "Total (" + shown.length + (shown.length === 1 ? " week)" : " weeks)");
-    fr.children[1].textContent = t.n; fr.children[2].textContent = fmtDec(t.min);
-    fr.children[3].textContent = t.over ? fmtDec(t.over) : "–"; fr.children[4].textContent = money(t.pay);
+    fr.children[1].textContent = fmtDec(t.min);
+    fr.children[2].textContent = t.over ? fmtDec(t.over) : "–"; fr.children[3].textContent = money(t.pay);
+    fr.children[4].textContent = money(t.paid); fr.children[5].textContent = t.pend ? money(t.pend) : "✓";
     $("earnMore").hidden = keys.length <= 8;
     $("earnMore").textContent = showAllWeeks ? "Show recent weeks" : "Show all " + keys.length + " weeks";
   }
@@ -825,6 +1109,9 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
   // ---------- week nav ----------
   $("prevWeek").addEventListener("click", () => { weekStart = addDays(weekStart, -7); render(); });
   $("nextWeek").addEventListener("click", () => { weekStart = addDays(weekStart, 7); render(); });
+  $("prevWeek2").addEventListener("click", () => $("prevWeek").click());
+  $("nextWeek2").addEventListener("click", () => $("nextWeek").click());
+  $("thisWeek2").addEventListener("click", () => $("thisWeek").click());
   $("thisWeek").addEventListener("click", () => { weekStart = mondayOf(new Date()); selectedDate = isoDate(new Date()); if (!editingId) $("fDate").value = selectedDate; render(); });
 
   // ---------- files out (share sheet on iPhone, download elsewhere) ----------
@@ -900,6 +1187,7 @@ table.earn tfoot td { font-weight: 600; border-bottom: 0; background: var(--bg);
 
   // ---------- boot ----------
   $("fDate").value = selectedDate;
+  try { setView(localStorage.getItem("shift-log-tab") || "today", true); } catch { setView("today", true); }
   render();
   connect();
 })();
