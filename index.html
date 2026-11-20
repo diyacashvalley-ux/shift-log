@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shift Log</title>
+<meta name="description" content="Track your daily job hours, overtime and pay.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Shift Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f3f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11171c" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<style>
+/* Layout: a timesheet. Punch clock on top, the week as a ledger strip, then the shift log. */
+:root {
+  --bg: #f3f5f7;
+  --surface: #ffffff;
+  --ink: #17212b;
+  --muted: #5b6875;
+  --line: #d9e0e6;
+  --accent: #0f6c74;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcefef;
+  --over: #b4561b;
+  --over-soft: #f6e4d6;
+  --danger: #b3261e;
+  --live: #1f8a4c;
+  --font-display: -apple-system, "SF Pro Display", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-body: -apple-system, "SF Pro Text", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11171c; --surface: #19222a; --ink: #e6edf2; --muted: #93a2ae; --line: #2a3640;
+    --accent: #4fb8be; --accent-ink: #0b1418; --accent-soft: #1b3a3e;
+    --over: #e59a62; --over-soft: #3d2a1d; --danger: #f2877f; --live: #5fd08f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11171c; --surface: #19222a; --ink: #e6edf2; --muted: #93a2ae; --line: #2a3640;
+  --accent: #4fb8be; --accent-ink: #0b1418; --accent-soft: #1b3a3e;
+  --over: #e59a62; --over-soft: #3d2a1d; --danger: #f2877f; --live: #5fd08f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+}
+.wrap {
+  max-width: 880px; margin: 0 auto;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px;
+}
+h1, h2 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+
+header.top { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; }
+.store-note { font-size: 0.8rem; color: var(--muted); }
+.store-note.warn { color: var(--over); }
+
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 6px;
+  padding: 8px 14px; font-weight: 500;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 6px 8px; }
+.btn.ghost:hover { color: var(--ink); }
+.btn.danger:hover { color: var(--danger); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+/* Punch clock */
+.clock {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between;
+}
+.clock .readout { display: grid; gap: 2px; min-width: 0; }
+.clock .time { font-family: var(--font-mono); font-size: 2.6rem; font-weight: 500; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.clock .status { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--muted); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex: none; }
+.clock.on .dot { background: var(--live); box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 22%, transparent); }
+.punch {
+  font-family: var(--font-display); font-weight: 800; font-size: 1.05rem;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 16px 28px; border-radius: 8px; border: 2px solid var(--accent);
+  background: var(--accent); color: var(--accent-ink);
+}
+.clock.on .punch { background: transparent; color: var(--accent); }
+
+/* Week */
+.week-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.week-nav { display: flex; align-items: center; gap: 4px; }
+.week-nav .range { font-weight: 600; min-width: 11ch; text-align: center; }
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.summary > div { background: var(--surface); padding: 14px 16px; display: grid; gap: 2px; }
+.summary .big { font-family: var(--font-mono); font-size: 1.6rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.summary .sub { font-size: 0.82rem; color: var(--muted); }
+.summary .over { color: var(--over); }
+.meter { height: 6px; border-radius: 3px; background: var(--accent-soft); overflow: hidden; margin-top: 6px; }
+.meter > span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+
+.days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 14px; }
+.day {
+  display: grid; grid-template-rows: auto 110px auto; gap: 6px; text-align: center;
+  background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 8px 2px;
+}
+.day:hover { border-color: var(--line); }
+.day.sel { border-color: var(--accent); background: var(--surface); }
+.day .dname { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.day.today .dname { color: var(--accent); }
+.bar-track { position: relative; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--line); }
+.bar-track .goal { position: absolute; left: 10%; right: 10%; border-top: 1px dashed var(--muted); opacity: 0.5; }
+.bar { width: 60%; max-width: 34px; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 0; }
+.bar.live { background: repeating-linear-gradient(135deg, var(--accent) 0 6px, color-mix(in srgb, var(--accent) 60%, transparent) 6px 12px); }
+.day .dval { font-family: var(--font-mono); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+.day .ddate { font-size: 0.72rem; color: var(--muted); }
+
+/* Add form */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 14px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field.wide { grid-column: 1 / -1; }
+.field input {
+  width: 100%; min-width: 0; padding: 8px 10px; font-size: 16px; -webkit-appearance: none; appearance: none; min-height: 40px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg);
+}
+.field input:focus { border-color: var(--accent); outline: none; }
+.form-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.calc { font-family: var(--font-mono); font-size: 0.9rem; color: var(--muted); }
+.err { color: var(--danger); font-size: 0.85rem; }
+
+/* Log */
+.log { display: grid; gap: 18px; }
+.log-day { display: grid; gap: 6px; }
+.log-day-head { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 4px; border-bottom: 1px solid var(--line); font-weight: 600; }
+.row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center;
+  padding: 8px 0;
+}
+.row + .row { border-top: 1px dashed var(--line); }
+.row .span { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.row .note { color: var(--muted); font-size: 0.88rem; overflow-wrap: anywhere; }
+.row .hrs { font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.row .acts { display: flex; gap: 2px; }
+.empty { border: 1px dashed var(--line); border-radius: 10px; padding: 24px; text-align: center; color: var(--muted); }
+
+.settings { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.settings .field { width: 150px; }
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 0.9rem;
+  z-index: 20;
+}
+@media (max-width: 520px) {
+  .clock .time { font-size: 2.1rem; }
+  .punch { width: 100%; }
+  .day { grid-template-rows: auto 80px auto; }
+  .day .ddate { display: none; }
+  .summary .big { font-size: 1.35rem; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bar { transition: height 0.3s ease; }
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Shift Log</h1>
+      <div class="muted" id="todayLine"></div>
+    </div>
+    <div class="store-note" id="storeNote">Saved on this device</div>
+  </header>
+
+  <section class="clock" id="clock" aria-label="Punch clock">
+    <div class="readout">
+      <div class="status"><span class="dot"></span><span id="clockStatus">Off the clock</span></div>
+      <div class="time" id="clockTime">0:00:00</div>
+    </div>
+    <button class="punch" id="punchBtn" type="button">Clock in</button>
+  </section>
+
+  <section aria-labelledby="weekTitle">
+    <div class="week-head">
+      <h2 id="weekTitle">This week</h2>
+      <div class="week-nav">
+        <button class="btn ghost" id="prevWeek" type="button" aria-label="Previous week">&larr;</button>
+        <span class="range" id="weekRange"></span>
+        <button class="btn ghost" id="nextWeek" type="button" aria-label="Next week">&rarr;</button>
+        <button class="btn ghost" id="thisWeek" type="button">Today</button>
+      </div>
+    </div>
+    <div class="summary" style="margin-top:12px">
+      <div>
+        <span class="label">Hours worked</span>
+        <span class="big" id="sumHours">0.00</span>
+        <span class="sub" id="sumHM">0h 00m</span>
+      </div>
+      <div>
+        <span class="label">Weekly target</span>
+        <span class="big" id="sumGoal">0%</span>
+        <div class="meter"><span id="goalBar" style="width:0%"></span></div>
+        <span class="sub" id="goalSub"></span>
+      </div>
+      <div>
+        <span class="label">Overtime</span>
+        <span class="big" id="sumOver">0.00</span>
+        <span class="sub" id="overSub">over 40 h</span>
+      </div>
+      <div>
+        <span class="label">Est. pay</span>
+        <span class="big" id="sumPay">—</span>
+        <span class="sub" id="paySub">set your hourly rate below</span>
+      </div>
+    </div>
+    <div class="days" id="days"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="formTitle">
+    <h2 id="formTitle">Add a shift</h2>
+    <form id="shiftForm" novalidate>
+      <div class="form-grid">
+        <label class="field"><span class="label">Date</span><input type="date" id="fDate" required></label>
+        <label class="field"><span class="label">Start</span><input type="time" id="fStart" required></label>
+        <label class="field"><span class="label">End</span><input type="time" id="fEnd" required></label>
+        <label class="field"><span class="label">Unpaid break (min)</span><input type="number" id="fBreak" min="0" step="5" value="0" inputmode="numeric"></label>
+        <label class="field wide"><span class="label">Note (optional)</span><input type="text" id="fNote" maxlength="140" placeholder="e.g. Closing shift, covered for Sam"></label>
+      </div>
+      <div class="form-foot" style="margin-top:14px">
+        <span class="calc" id="fCalc">Fill in start and end to see the length</span>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn" id="cancelEdit" hidden>Cancel</button>
+          <button type="submit" class="btn primary" id="saveBtn">Add shift</button>
+        </div>
+      </div>
+      <div class="err" id="fErr" role="alert"></div>
+    </form>
+  </section>
+
+  <section aria-labelledby="logTitle" style="display:grid;gap:12px">
+    <div class="week-head">
+      <h2 id="logTitle">Shifts this week</h2>
+      <button class="btn" id="exportBtn" type="button" hidden>Export week as CSV</button>
+    </div>
+    <div class="log" id="log"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="setTitle">
+    <h2 id="setTitle">Settings</h2>
+    <form class="settings" id="settingsForm">
+      <label class="field"><span class="label">Hourly rate (CAD)</span><input type="number" id="sRate" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+      <label class="field"><span class="label">Weekly target (h)</span><input type="number" id="sGoal" min="1" max="168" step="0.5" value="40" inputmode="decimal"></label>
+      <label class="field"><span class="label">Overtime after (h)</span><input type="number" id="sOT" min="1" max="168" step="0.5" value="40" inputmode="decimal"></label>
+      <button class="btn" type="submit">Save settings</button>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="bakTitle">
+    <h2 id="bakTitle">Backup</h2>
+    <p class="muted" style="margin:0;max-width:60ch">Your shifts are stored only on this phone. Save a backup now and then (to Files, iCloud Drive or email) so you can restore them if the app is deleted or you get a new phone.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <button class="btn primary" id="backupBtn" type="button">Save backup</button>
+      <label class="btn" for="restoreFile" style="display:inline-block">Restore from backup</label>
+      <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+      <span class="store-note" id="lastBackup"></span>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const DAY_MS = 86400000;
+  const DEFAULT_SETTINGS = { rate: 0, goal: 40, otAfter: 40, clockIn: null };
+
+  // ---------- state ----------
+  let shifts = [];          // {id, date, start, end, breakMin, note}
+  let settings = { ...DEFAULT_SETTINGS };
+  let weekStart = mondayOf(new Date());
+  let selectedDate = isoDate(new Date());
+  let editingId = null;
+  let store = null;
+
+  // ---------- date helpers ----------
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function isoDate(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function parseDate(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+  function mondayOf(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); const w = (x.getDay() + 6) % 7; x.setDate(x.getDate() - w); return x; }
+  function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function hhmm(d) { return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function toMin(t) { const [h, m] = t.split(":").map(Number); return h * 60 + m; }
+  function shiftMinutes(s) {
+    let span = toMin(s.end) - toMin(s.start);
+    if (span <= 0) span += 1440; // overnight
+    return Math.max(0, span - (Number(s.breakMin) || 0));
+  }
+  function fmtHM(min) { const m = Math.round(min); return Math.floor(m / 60) + "h " + pad(m % 60) + "m"; }
+  function fmtDec(min) { return (min / 60).toFixed(2); }
+  function fmtClock(ms) { const s = Math.floor(ms / 1000); return Math.floor(s / 3600) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60); }
+  function fmt12(t) { const [h, m] = t.split(":").map(Number); return ((h + 11) % 12 + 1) + ":" + pad(m) + (h < 12 ? " am" : " pm"); }
+  const money = (n) => { try { return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n) + " CAD"; } catch { return "$" + n.toFixed(2) + " CAD"; } };
+  const dayFmt = new Intl.DateTimeFormat(undefined, { weekday: "short" });
+  const shortFmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+  const longFmt = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
+  const newId = () => "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  // ---------- storage: on this device ----------
+  function localStore() {
+    const KEY = "shift-log-v1";
+    let listeners = [];
+    const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || { shifts: [], settings: {} }; } catch { return { shifts: [], settings: {} }; } };
+    const write = (v) => { localStorage.setItem(KEY, JSON.stringify(v)); listeners.forEach((f) => f(v)); };
+    return {
+      kind: "local",
+      subscribe(fn) { listeners.push(fn); fn(read()); },
+      async saveShift(s) { const v = read(); v.shifts = v.shifts.filter((x) => x.id !== s.id).concat(s); write(v); },
+      async removeShift(id) { const v = read(); v.shifts = v.shifts.filter((x) => x.id !== id); write(v); },
+      async saveSettings(st) { const v = read(); v.settings = st; write(v); },
+      dump: read,
+      async replaceAll(v) { write(v); },
+    };
+  }
+  function apply(v) {
+    shifts = (v.shifts || []).slice();
+    settings = { ...DEFAULT_SETTINGS, ...(v.settings || {}) };
+    delete settings.kind;
+    syncSettingsForm();
+    render();
+  }
+
+  function connect() {
+    store = localStore();
+    store.subscribe(apply);
+    try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+  }
+
+  async function guarded(p, okMsg) {
+    try { await p; if (okMsg) toast(okMsg); }
+    catch (e) {
+      const code = e && e.code;
+      toast(code === "quota_exceeded" ? "Storage is full. Delete some old shifts and try again." :
+            "Couldn't save. Your phone's storage may be full.");
+    }
+  }
+
+  // ---------- toast ----------
+  let toastT;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2400); }
+
+  // ---------- render ----------
+  function liveMinutesFor(dateStr) {
+    if (!settings.clockIn) return 0;
+    const start = new Date(settings.clockIn);
+    if (isoDate(start) !== dateStr) return 0;
+    return Math.max(0, (Date.now() - start.getTime()) / 60000);
+  }
+
+  function render() {
+    const today = isoDate(new Date());
+    $("todayLine").textContent = longFmt.format(new Date());
+
+    const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
+    const end = days[6];
+    $("weekRange").textContent = shortFmt.format(weekStart) + " – " + shortFmt.format(end);
+    const isCurrent = isoDate(mondayOf(new Date())) === isoDate(weekStart);
+    $("weekTitle").textContent = isCurrent ? "This week" : "Week of " + shortFmt.format(weekStart);
+    $("logTitle").textContent = isCurrent ? "Shifts this week" : "Shifts, week of " + shortFmt.format(weekStart);
+
+    const inWeek = new Set(days.map(isoDate));
+    const weekShifts = shifts.filter((s) => inWeek.has(s.date));
+    const perDay = days.map((d) => {
+      const ds = isoDate(d);
+      const logged = weekShifts.filter((s) => s.date === ds).reduce((a, s) => a + shiftMinutes(s), 0);
+      return { ds, d, logged, live: liveMinutesFor(ds) };
+    });
+    const totalMin = perDay.reduce((a, x) => a + x.logged + x.live, 0);
+    const goal = Number(settings.goal) || 40;
+    const ot = Number(settings.otAfter) || 40;
+    const rate = Number(settings.rate) || 0;
+
+    $("sumHours").textContent = fmtDec(totalMin);
+    $("sumHM").textContent = fmtHM(totalMin) + (settings.clockIn && perDay.some((x) => x.live) ? " · incl. current shift" : "");
+    const pct = Math.round((totalMin / 60 / goal) * 100);
+    $("sumGoal").textContent = pct + "%";
+    $("goalBar").style.width = Math.min(100, pct) + "%";
+    const left = goal * 60 - totalMin;
+    $("goalSub").textContent = left > 0 ? fmtHM(left) + " to go of " + goal + " h" : "Target of " + goal + " h reached";
+    const overMin = Math.max(0, totalMin - ot * 60);
+    $("sumOver").textContent = fmtDec(overMin);
+    $("sumOver").classList.toggle("over", overMin > 0);
+    $("overSub").textContent = "over " + ot + " h";
+    if (rate > 0) {
+      const regular = Math.min(totalMin, ot * 60) / 60, extra = overMin / 60;
+      $("sumPay").textContent = money(regular * rate + extra * rate * 1.5);
+      $("paySub").textContent = money(rate) + "/h · overtime at 1.5×";
+    } else { $("sumPay").textContent = "—"; $("paySub").textContent = "set your hourly rate below"; }
+
+    // day bars
+    const maxMin = Math.max(10 * 60, ...perDay.map((x) => x.logged + x.live));
+    const goalLine = (goal / 5) * 60; // daily share of target over a 5-day week
+    const daysEl = $("days");
+    daysEl.innerHTML = "";
+    perDay.forEach((x) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "day" + (x.ds === today ? " today" : "") + (x.ds === selectedDate ? " sel" : "");
+      const mins = x.logged + x.live;
+      b.setAttribute("aria-label", longFmt.format(x.d) + ": " + fmtHM(mins) + ". Select to add a shift on this day.");
+      b.innerHTML =
+        '<span class="dname"></span>' +
+        '<span class="bar-track"><span class="goal"></span><span class="bar"></span></span>' +
+        '<span><span class="dval"></span><br><span class="ddate"></span></span>';
+      b.querySelector(".dname").textContent = dayFmt.format(x.d);
+      b.querySelector(".goal").style.bottom = Math.min(100, (goalLine / maxMin) * 100) + "%";
+      const bar = b.querySelector(".bar");
+      bar.style.height = (mins / maxMin) * 100 + "%";
+      if (x.live) bar.classList.add("live");
+      b.querySelector(".dval").textContent = mins ? (mins / 60).toFixed(1) + "h" : "–";
+      b.querySelector(".ddate").textContent = x.d.getDate();
+      b.addEventListener("click", () => { selectedDate = x.ds; if (!editingId) $("fDate").value = x.ds; updateCalc(); render(); });
+      daysEl.appendChild(b);
+    });
+
+    // log
+    const log = $("log");
+    log.innerHTML = "";
+    $("exportBtn").hidden = weekShifts.length === 0;
+    if (!weekShifts.length) {
+      const e = document.createElement("div");
+      e.className = "empty";
+      e.textContent = shifts.length
+        ? "No shifts logged this week. Clock in, or add one with the form above."
+        : "Your shifts will appear here. Press Clock in when you start work, or add a past shift with the form above.";
+      log.appendChild(e);
+    }
+    perDay.slice().reverse().forEach((x) => {
+      const list = weekShifts.filter((s) => s.date === x.ds).sort((a, b) => a.start.localeCompare(b.start));
+      if (!list.length) return;
+      const g = document.createElement("div");
+      g.className = "log-day";
+      const head = document.createElement("div");
+      head.className = "log-day-head";
+      head.innerHTML = "<span></span><span class='num'></span>";
+      head.children[0].textContent = longFmt.format(x.d);
+      head.children[1].textContent = fmtHM(x.logged);
+      g.appendChild(head);
+      list.forEach((s) => {
+        const r = document.createElement("div");
+        r.className = "row";
+        r.innerHTML = "<div><div class='span'></div><div class='note'></div></div><div class='hrs'></div><div class='acts'></div>";
+        const overnight = toMin(s.end) <= toMin(s.start);
+        r.querySelector(".span").textContent = fmt12(s.start) + " – " + fmt12(s.end) + (overnight ? " (+1 day)" : "");
+        const bits = [];
+        if (Number(s.breakMin)) bits.push(s.breakMin + " min break");
+        if (s.note) bits.push(s.note);
+        r.querySelector(".note").textContent = bits.join(" · ");
+        r.querySelector(".hrs").textContent = fmtDec(shiftMinutes(s)) + " h";
+        const acts = r.querySelector(".acts");
+        const ed = document.createElement("button");
+        ed.type = "button"; ed.className = "btn ghost"; ed.textContent = "Edit";
+        ed.addEventListener("click", () => startEdit(s));
+        const del = document.createElement("button");
+        del.type = "button"; del.className = "btn ghost danger"; del.textContent = "Delete";
+        del.addEventListener("click", () => {
+          if (del.dataset.armed) { guarded(store.removeShift(s.id), "Shift deleted"); return; }
+          del.dataset.armed = "1"; del.textContent = "Confirm";
+          setTimeout(() => { delete del.dataset.armed; del.textContent = "Delete"; }, 3000);
+        });
+        acts.append(ed, del);
+        g.appendChild(r);
+      });
+      log.appendChild(g);
+    });
+
+    renderClock();
+  }
+
+  // ---------- punch clock ----------
+  function renderClock() {
+    const on = !!settings.clockIn;
+    $("clock").classList.toggle("on", on);
+    $("punchBtn").textContent = on ? "Clock out" : "Clock in";
+    if (on) {
+      const st = new Date(settings.clockIn);
+      $("clockStatus").textContent = "On the clock since " + fmt12(hhmm(st)) + (isoDate(st) !== isoDate(new Date()) ? " (" + shortFmt.format(st) + ")" : "");
+      $("clockTime").textContent = fmtClock(Date.now() - st.getTime());
+    } else {
+      $("clockStatus").textContent = "Off the clock";
+      const todayMin = shifts.filter((s) => s.date === isoDate(new Date())).reduce((a, s) => a + shiftMinutes(s), 0);
+      $("clockTime").textContent = fmtClock(todayMin * 60000);
+      $("clockStatus").textContent = todayMin ? "Off the clock · logged today" : "Off the clock";
+    }
+  }
+  setInterval(() => { if (settings.clockIn) render(); }, 1000);
+
+  $("punchBtn").addEventListener("click", async () => {
+    if (!store) return;
+    if (!settings.clockIn) {
+      const next = { ...settings, clockIn: new Date().toISOString() };
+      settings = next; render();
+      await guarded(store.saveSettings(next), "Clocked in");
+    } else {
+      const st = new Date(settings.clockIn), now = new Date();
+      const shift = { id: newId(), date: isoDate(st), start: hhmm(st), end: hhmm(now), breakMin: 0, note: "" };
+      const next = { ...settings, clockIn: null };
+      settings = next;
+      if (now - st >= 60000) await guarded(store.saveShift(shift));
+      await guarded(store.saveSettings(next), now - st >= 60000 ? "Clocked out · " + fmtHM((now - st) / 60000) + " logged" : "Clocked out (under a minute, not logged)");
+      weekStart = mondayOf(st);
+      render();
+    }
+  });
+
+  // ---------- form ----------
+  function updateCalc() {
+    const s = { start: $("fStart").value, end: $("fEnd").value, breakMin: $("fBreak").value };
+    if (!s.start || !s.end) { $("fCalc").textContent = "Fill in start and end to see the length"; return; }
+    const m = shiftMinutes(s);
+    $("fCalc").textContent = fmtHM(m) + " (" + fmtDec(m) + " h)" + (toMin(s.end) <= toMin(s.start) ? " · ends next day" : "");
+  }
+  ["fStart", "fEnd", "fBreak"].forEach((id) => $(id).addEventListener("input", updateCalc));
+
+  function resetForm() {
+    editingId = null;
+    $("shiftForm").reset();
+    $("fDate").value = selectedDate;
+    $("fBreak").value = 0;
+    $("saveBtn").textContent = "Add shift";
+    $("formTitle").textContent = "Add a shift";
+    $("cancelEdit").hidden = true;
+    $("fErr").textContent = "";
+    updateCalc();
+  }
+  function startEdit(s) {
+    editingId = s.id;
+    $("fDate").value = s.date; $("fStart").value = s.start; $("fEnd").value = s.end;
+    $("fBreak").value = s.breakMin || 0; $("fNote").value = s.note || "";
+    $("saveBtn").textContent = "Save changes";
+    $("formTitle").textContent = "Edit shift";
+    $("cancelEdit").hidden = false;
+    updateCalc();
+    $("shiftForm").scrollIntoView({ behavior: "smooth", block: "center" });
+    $("fStart").focus({ preventScroll: true });
+  }
+  $("cancelEdit").addEventListener("click", resetForm);
+
+  $("shiftForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const s = {
+      id: editingId || newId(),
+      date: $("fDate").value, start: $("fStart").value, end: $("fEnd").value,
+      breakMin: Math.max(0, Math.round(Number($("fBreak").value) || 0)),
+      note: $("fNote").value.trim(),
+    };
+    if (!s.date || !s.start || !s.end) { $("fErr").textContent = "Enter a date, a start time and an end time."; return; }
+    if (s.start === s.end) { $("fErr").textContent = "Start and end are the same time. Change one of them."; return; }
+    if (shiftMinutes(s) <= 0) { $("fErr").textContent = "The break is longer than the shift. Shorten the break."; return; }
+    const wasEdit = !!editingId;
+    selectedDate = s.date;
+    weekStart = mondayOf(parseDate(s.date));
+    resetForm();
+    await guarded(store.saveShift(s), wasEdit ? "Shift updated" : "Shift added · " + fmtHM(shiftMinutes(s)));
+    render();
+  });
+
+  // ---------- settings ----------
+  function syncSettingsForm() {
+    if (document.activeElement && document.activeElement.closest("#settingsForm")) return;
+    $("sRate").value = settings.rate ? settings.rate : "";
+    $("sGoal").value = settings.goal;
+    $("sOT").value = settings.otAfter;
+  }
+  $("settingsForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const next = {
+      ...settings,
+      rate: Math.max(0, Number($("sRate").value) || 0),
+      goal: Math.min(168, Math.max(1, Number($("sGoal").value) || 40)),
+      otAfter: Math.min(168, Math.max(1, Number($("sOT").value) || 40)),
+    };
+    settings = next; render();
+    document.activeElement && document.activeElement.blur();
+    await guarded(store.saveSettings(next), "Settings saved");
+  });
+
+  // ---------- week nav ----------
+  $("prevWeek").addEventListener("click", () => { weekStart = addDays(weekStart, -7); render(); });
+  $("nextWeek").addEventListener("click", () => { weekStart = addDays(weekStart, 7); render(); });
+  $("thisWeek").addEventListener("click", () => { weekStart = mondayOf(new Date()); selectedDate = isoDate(new Date()); if (!editingId) $("fDate").value = selectedDate; render(); });
+
+  // ---------- files out (share sheet on iPhone, download elsewhere) ----------
+  async function saveFile(filename, text, type) {
+    const blob = new Blob([text], { type });
+    try {
+      const file = new File([blob], filename, { type });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        return true;
+      }
+    } catch (e) {
+      if (e && e.name === "AbortError") return false;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    return true;
+  }
+
+  $("exportBtn").addEventListener("click", async () => {
+    const inWeek = new Set([...Array(7)].map((_, i) => isoDate(addDays(weekStart, i))));
+    const rows = shifts.filter((s) => inWeek.has(s.date)).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+    const esc = (v) => '"' + String(v).replace(/"/g, '""') + '"';
+    const lines = [["Date", "Start", "End", "Break (min)", "Hours", "Note"].join(",")]
+      .concat(rows.map((s) => [s.date, s.start, s.end, s.breakMin || 0, fmtDec(shiftMinutes(s)), esc(s.note || "")].join(",")));
+    const total = rows.reduce((a, s) => a + shiftMinutes(s), 0);
+    lines.push(["Total", "", "", "", fmtDec(total), ""].join(","));
+    await saveFile("shifts-week-of-" + isoDate(weekStart) + ".csv", lines.join("\n"), "text/csv");
+  });
+
+  // ---------- backup / restore ----------
+  const BK = "shift-log-last-backup";
+  function showLastBackup() {
+    let t = null; try { t = localStorage.getItem(BK); } catch {}
+    $("lastBackup").textContent = t ? "Last backup: " + shortFmt.format(new Date(t)) : "No backup saved yet";
+  }
+  $("backupBtn").addEventListener("click", async () => {
+    const data = { app: "shift-log", version: 1, savedAt: new Date().toISOString(), ...store.dump() };
+    const ok = await saveFile("shift-log-backup-" + isoDate(new Date()) + ".json", JSON.stringify(data, null, 2), "application/json");
+    if (ok) { try { localStorage.setItem(BK, data.savedAt); } catch {} showLastBackup(); toast("Backup ready"); }
+  });
+  $("restoreFile").addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    try {
+      const v = JSON.parse(await f.text());
+      if (!v || v.app !== "shift-log" || !Array.isArray(v.shifts)) throw new Error("bad");
+      const cur = store.dump();
+      const byId = new Map(cur.shifts.map((x) => [x.id, x]));
+      v.shifts.forEach((x) => { if (x && x.id && x.date && x.start && x.end) byId.set(x.id, x); });
+      const added = byId.size - cur.shifts.length;
+      await store.replaceAll({ shifts: [...byId.values()], settings: { ...cur.settings, ...(v.settings || {}), clockIn: cur.settings.clockIn || null } });
+      toast("Backup restored · " + v.shifts.length + " shifts (" + Math.max(0, added) + " new)");
+    } catch {
+      toast("That file isn't a Shift Log backup. Choose a file named shift-log-backup-….json.");
+    }
+  });
+  showLastBackup();
+
+  // re-render when coming back to the app (date may have changed)
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+
+  // offline support
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+
+  // ---------- boot ----------
+  $("fDate").value = selectedDate;
+  render();
+  connect();
+})();
+</script>
+</body>
+</html>
